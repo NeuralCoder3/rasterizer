@@ -18,9 +18,7 @@ def ray_triangle_intersection(
     e2 = C - A
     p = np.cross(direction, e2)
     det = np.dot(e1, p)
-    # if abs(det) < 1e-6:  # epsilon check for numerical stability
-    #     return -1.0  # Return -1 instead of None for numba compatibility
-    # backface culling
+    # backface culling (otherwise, use abs)
     if det < 1e-6:
         return -1.0
     inv_det = 1.0 / det
@@ -59,13 +57,22 @@ def readObj(filename):
 
 
 
-# Simple test triangle in front of the camera (z = 0 plane)
-# A = np.array([-1.0, -1.0, 0.0])
-# B = np.array([ 1.0, -1.0, 0.0])
-# C = np.array([ 0.0,  1.0, 0.0])
-# triangle = (A, B, C)
-
-
+@numba.njit(nogil=True)
+def calculate_camera_basis(direction: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Calculate camera basis vectors for debugging"""
+    forward = direction / np.linalg.norm(direction)
+    world_up = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+    right = np.cross(world_up, forward)
+    if np.linalg.norm(right) < 1e-6:
+        world_up = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+        right = np.cross(world_up, forward)
+    right = right / np.linalg.norm(right)
+    up = np.cross(forward, right)
+    up = up / np.linalg.norm(up)
+    # Maintain right-handed system
+    up = -up
+    right = -right  
+    return forward, right, up
 
 @numba.njit(nogil=True)
 def render(
@@ -80,27 +87,7 @@ def render(
     depth_map = np.full((height, width), np.inf, dtype=np.float64)
     pixels = np.zeros((height, width, 3), dtype=np.uint8)
     
-    # Camera basis and projection setup - ensure proper world alignment
-    forward = direction / np.linalg.norm(direction)
-    
-    # Define world coordinate system: Y=up, Z=forward, X=right
-    world_up = np.array([0.0, 1.0, 0.0], dtype=np.float64)
-    
-    # Build camera basis aligned with world coordinates - CORRECT right-handed system
-    right = np.cross(world_up, forward)  # This gives correct "right" direction
-    if np.linalg.norm(right) < 1e-6:  # If forward and world_up are parallel
-        world_up = np.array([1.0, 0.0, 0.0], dtype=np.float64)
-        right = np.cross(world_up, forward)
-    right = right / np.linalg.norm(right)
-    
-    # Ensure up points in world Y direction - CORRECT order
-    up = np.cross(forward, right)  # This gives correct "up" direction
-    up = up / np.linalg.norm(up)
-    
-    # Fix: Ensure up vector points in intuitive direction (positive Z when looking down)
-    # if up[2] < 0:  # If up vector points backward in Z, flip it
-    up = -up
-    right = -right  # Maintain right-handed system
+    forward, right, up = calculate_camera_basis(direction)
 
     aspect = width / height
     half_tan_fov = np.tan(np.deg2rad(fov) * 0.5)
@@ -147,10 +134,6 @@ def render(
             if closest_t < np.inf:
                 depth_map[j, i] = closest_t
                 pixels[j, i] = closest_color
-            # if ray_triangle_intersection(origin, ray_direction, triangle) is not None:
-            #     image.putpixel((i, j), (255, 0, 0))
-            # else:
-            #     image.putpixel((i, j), (0, 0, 0))
 
             # pixels[i, j] = (i, j, 0)
     return pixels, depth_map
@@ -258,15 +241,6 @@ print(f"Camera destination: {destination}")
 # Create debug cube for testing
 vertices, faces, colors = create_debug_cube(size=1.0)
 
-# Debug: verify cube vertices
-print(f"Cube vertices:")
-for i, v in enumerate(vertices):
-    print(f"  Vertex {i}: {v} (X={v[0]:.1f}, Y={v[1]:.1f}, Z={v[2]:.1f})")
-
-# Scale and position the cube
-vertices = vertices * 5  # Make it bigger
-vertices[:, 2] += 2  # Move it forward
-
 # Create objects list with colors
 objects = []
 
@@ -299,17 +273,8 @@ origin = np.array(origin, dtype=np.float64)
 direction = np.array(destination - origin, dtype=np.float64)
 direction = direction / np.linalg.norm(direction)
 
-# Debug: verify camera coordinate system
-forward = direction / np.linalg.norm(direction)
-world_up = np.array([0.0, 1.0, 0.0], dtype=np.float64)
-right = np.cross(world_up, forward)
-if np.linalg.norm(right) < 1e-6:
-    world_up = np.array([1.0, 0.0, 0.0], dtype=np.float64)
-    right = np.cross(world_up, forward)
-right = right / np.linalg.norm(right)
-up = np.cross(forward, right)
-up = up / np.linalg.norm(up)
-
+# Calculate and display camera basis
+forward, right, up = calculate_camera_basis(direction)
 print(f"Camera basis - Forward: {forward.tolist()}")
 print(f"Camera basis - Right: {right.tolist()}")
 print(f"Camera basis - Up: {up.tolist()}")
