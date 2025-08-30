@@ -50,6 +50,11 @@ def readObj(filename):
                 face_indices = [
                     int(x.split('/')[0]) - 1 
                     for x in line.split()[1:]]
+                if len(face_indices) != 3:
+                    print(f"Warning: face {face_indices} has {len(face_indices)} vertices, expected 3")
+                    continue
+                # negative = relative to end
+                face_indices = [x if x >= 0 else len(vertices) + x for x in face_indices]
                 faces.append(face_indices)
     return np.array(vertices, dtype=np.float64), np.array(faces, dtype=np.int32)
 
@@ -182,8 +187,11 @@ if __name__ == "__main__":
     objects = []
 
     # Add bunny
-    bunny_vertices, bunny_faces = readObj("bunny.obj")
-    bunny_vertices = bunny_vertices * 50
+    bunny_vertices, bunny_faces = readObj("data/dragon2.obj")
+    bunny_vertices = bunny_vertices * 10
+    
+    # bunny_vertices, bunny_faces = readObj("bunny.obj")
+    # bunny_vertices = bunny_vertices * 50
     bunny_colors = np.zeros((bunny_faces.shape[0], 3), dtype=np.uint8)
     bunny_colors[:, 0] = 255  # Red
     bunny_colors[:, 1] = 0
@@ -225,7 +233,7 @@ if __name__ == "__main__":
     pixels, depth_map = render_with_bvh(width, height, bvh, origin, direction, fov, None)
 
     # Save the colored rendered image
-    Image.fromarray(pixels).save("render_bvh.png")
+    Image.fromarray(pixels).save("output/render_bvh.png")
 
     # Save the depth map as a separate image for debugging
     depth_pixels = np.zeros((height, width, 3), dtype=np.uint8)
@@ -244,5 +252,5 @@ if __name__ == "__main__":
         depth_pixels[finite_mask, 1] = depth_u8
         depth_pixels[finite_mask, 2] = depth_u8
 
-    Image.fromarray(depth_pixels).save("depth_map_bvh.png")
+    Image.fromarray(depth_pixels).save("output/depth_map_bvh.png")
     print("Rendering complete! Check render_bvh.png and depth_map_bvh.png")

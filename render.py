@@ -2,11 +2,18 @@
 import numpy as np
 from PIL import Image
 from numpy.typing import NDArray
-from tqdm import tqdm
-import numba
-from numba_progress import ProgressBar
 
-@numba.njit
+use_numba = False
+
+if use_numba:
+    from numba import njit  # pyright: ignore[reportMissingImports]
+    from numba_progress import ProgressBar  # pyright: ignore[reportMissingImports]
+else:
+    from tqdm import tqdm
+    type ProgressBar = tqdm
+    njit = lambda nogil=True: lambda x: x
+
+@njit(nogil=True)
 def ray_triangle_intersection(
     origin: NDArray[np.float64],
     direction: NDArray[np.float64],
@@ -57,7 +64,7 @@ def readObj(filename):
 
 
 
-@numba.njit(nogil=True)
+@njit(nogil=True)
 def calculate_camera_basis(direction: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Calculate camera basis vectors for debugging"""
     forward = direction / np.linalg.norm(direction)
@@ -74,7 +81,7 @@ def calculate_camera_basis(direction: NDArray[np.float64]) -> tuple[NDArray[np.f
     right = -right  
     return forward, right, up
 
-@numba.njit(nogil=True)
+@njit(nogil=True)
 def render(
     width: int,
     height: int,
@@ -238,20 +245,21 @@ fov = 90
 print(f"Camera origin: {origin}")
 print(f"Camera destination: {destination}")
 
-# Create debug cube for testing
-vertices, faces, colors = create_debug_cube(size=1.0)
-
 # Create objects list with colors
 objects = []
 
+# Create debug cube for testing
+vertices, faces, colors = create_debug_cube(size=8.0)
+objects.append((vertices, faces, colors))
+
 # Add bunny
-bunny_vertices, bunny_faces = readObj("bunny.obj")
+bunny_vertices, bunny_faces = readObj("data/bunny.obj")
 bunny_vertices = bunny_vertices * 50
 bunny_colors = np.zeros((bunny_faces.shape[0], 3), dtype=np.uint8)
 bunny_colors[:, 0] = 255  # Red
 bunny_colors[:, 1] = 0
 bunny_colors[:, 2] = 0
-objects.append((bunny_vertices, bunny_faces, bunny_colors))
+# objects.append((bunny_vertices, bunny_faces, bunny_colors))
 
 
 # For debugging, you can also add a colored bottom plane:
@@ -282,11 +290,12 @@ print(f"Dot products - F·R: {np.dot(forward, right):.3f}, F·U: {np.dot(forward
 
 
 
-with ProgressBar(total=width*height, desc="Rendering") as progress_bar:
+# with ProgressBar(total=width*height, desc="Rendering") as progress_bar:
+with tqdm(total=width*height, desc="Rendering") as progress_bar:
     pixels, depth_map = render(width, height, objects, origin, direction, fov, progress_bar)
 
 # Save the colored rendered image
-Image.fromarray(pixels).save("render.png")
+Image.fromarray(pixels).save("output/render.png")
 
 # Save the depth map as a separate image for debugging
 depth_pixels = np.zeros((height, width, 3), dtype=np.uint8)
@@ -305,7 +314,7 @@ if np.any(finite_mask):
     depth_pixels[finite_mask, 1] = depth_u8
     depth_pixels[finite_mask, 2] = depth_u8
 
-Image.fromarray(depth_pixels).save("depth_map.png")
+Image.fromarray(depth_pixels).save("output/depth_map.png")
 
 
 
