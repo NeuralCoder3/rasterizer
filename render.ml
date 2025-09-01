@@ -14,7 +14,7 @@ type ray_hit = {
 type image = {
   width: int;
   height: int;
-  data: color array array
+  data: color list list
 }
 
 type obj = {
@@ -120,33 +120,24 @@ let calculate_camera_basis (direction: vec) : vec * vec * vec =
   let right' = scale (-1.0) right' in
   (forward, right', up)
 
-let render (width: int) (height: int) (objects: obj list) (origin: vec) (direction: vec) (fov: float) : image * float array array =
+let render (width: int) (height: int) (objects: obj list) (origin: vec) (direction: vec) (fov: float) : image * float list list =
 
   let light_dir = normalize (0.0, 0.0, 1.0) in
-
-  let depth_map = Array.make_matrix width height 1000000.0 in
-  let image = {
-    width;
-    height;
-    data = Array.make_matrix width height {r=0; g=0; b=0}
-  } in
-
   let forward, right, up = calculate_camera_basis direction in
 
   let aspect_ratio = float_of_int width /. float_of_int height in
   let fov_rad = fov *. pi /. 180.0 in
   let half_tan_fov = tan (fov_rad *. 0.5) in
 
-  for i = 0 to width - 1 do
-    for j = 0 to height - 1 do
+  List.init height (fun j ->
+    List.init width (fun i ->
       let x = (2.0 *. (float_of_int i +. 0.5) /. float_of_int width -. 1.0) *. aspect_ratio *. half_tan_fov in
       let y = (2.0 *. (float_of_int j +. 0.5) /. float_of_int height -. 1.0) *. half_tan_fov in
       let ray_direction = add forward (add (scale x right) (scale y up)) in
       let ray_direction = normalize ray_direction in
-      let closest_t = ref Float.infinity in
-      let closest_color = ref {r=0; g=0; b=0} in
-      List.iter (fun {vertices; faces; colors} ->
-        List.iteri (fun face_idx face ->
+      (* Fold instead of iter + ref adds 2 or 3s to the runtime *)
+      List.fold_left (fun (closest_color, closest_t) {vertices; faces; colors} ->
+        List.fold_left (fun (closest_color, closest_t) (face_idx, face) ->
           let idx0, idx1, idx2 = face in
           let a = vertices.(idx0) in
           let b = vertices.(idx1) in
@@ -154,39 +145,33 @@ let render (width: int) (height: int) (objects: obj list) (origin: vec) (directi
           let triangle = (a, b, c) in
           let t = ray_triangle_intersection origin ray_direction triangle in
           match t with
-          | Some {t; normal=n} when t > 0.0 && t < !closest_t ->
-            closest_t := t;
+          | Some {t; normal=n} when t > 0.0 && t < closest_t ->
             (* closest_color := colors.(face_idx) *)
             (* phong-like diffuse shading *)
             let d = max 0.4 (dot n light_dir) in
             let {r; g; b} = colors.(face_idx) in
-            closest_color := {
+            ({
               r=int_of_float (float_of_int r *. d);
               g=int_of_float (float_of_int g *. d);
               b=int_of_float (float_of_int b *. d)
-            }
-          | _ -> ()
-        ) faces
-      ) objects;
-      if !closest_t < Float.infinity then begin
-        image.data.(i).(j) <- !closest_color;
-        depth_map.(i).(j) <- !closest_t
-      end
-    done
-  done;
-  (image, depth_map)
+            }, t)
+          | _ -> (closest_color, closest_t)
+        ) (closest_color, closest_t) (List.mapi (fun i face -> (i, face)) faces)
+      ) ({r=0; g=0; b=0}, Float.infinity) objects
+    )
+  ) |> List.map List.split |> List.split 
+  |> fun (colors, depths) -> {width; height; data=colors}, depths
 
 let save_image (image: image) (filename: string) : unit =
   let ic = open_out filename in
   output_string ic "P3\n";
   output_string ic (string_of_int image.width ^ " " ^ string_of_int image.height ^ "\n");
   output_string ic "255\n";
-  for j = 0 to image.height - 1 do
-    for i = 0 to image.width - 1 do
-      let {r; g; b} = image.data.(i).(j) in
+  List.iter (fun row ->
+    List.iter (fun {r; g; b} ->
       output_string ic (string_of_int r ^ " " ^ string_of_int g ^ " " ^ string_of_int b ^ "\n")
-    done
-  done;
+    ) row
+  ) image.data;
   close_out ic
 
 

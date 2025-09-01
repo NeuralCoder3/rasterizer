@@ -187,11 +187,11 @@ if __name__ == "__main__":
     objects = []
 
     # Add bunny
-    bunny_vertices, bunny_faces = readObj("data/dragon2.obj")
-    bunny_vertices = bunny_vertices * 10
+    # bunny_vertices, bunny_faces = readObj("data/dragon2.obj")
+    # bunny_vertices = bunny_vertices * 10
     
-    # bunny_vertices, bunny_faces = readObj("bunny.obj")
-    # bunny_vertices = bunny_vertices * 50
+    bunny_vertices, bunny_faces = readObj("data/bunny.obj")
+    bunny_vertices = bunny_vertices * 50
     bunny_colors = np.zeros((bunny_faces.shape[0], 3), dtype=np.uint8)
     bunny_colors[:, 0] = 255  # Red
     bunny_colors[:, 1] = 0
@@ -199,17 +199,17 @@ if __name__ == "__main__":
     objects.append((bunny_vertices, bunny_faces, bunny_colors))
 
     # Add bottom plane
-    bottom_size = 10.0
-    bottom_plane = -5  # Position below the bunny
-    vertices_bottom = np.array([
-        [-bottom_size, bottom_plane, -bottom_size],
-        [ bottom_size, bottom_plane, -bottom_size],
-        [ bottom_size, bottom_plane,  bottom_size],
-        [-bottom_size, bottom_plane,  bottom_size],
-    ], dtype=np.float64)
-    faces_bottom = np.array([[0, 2, 1], [0, 3, 2]], dtype=np.int32)
-    colors_bottom = np.array([[128, 128, 128], [128, 128, 128]], dtype=np.uint8)  # Gray
-    objects.append((vertices_bottom, faces_bottom, colors_bottom))
+    # bottom_size = 10.0
+    # bottom_plane = -5  # Position below the bunny
+    # vertices_bottom = np.array([
+    #     [-bottom_size, bottom_plane, -bottom_size],
+    #     [ bottom_size, bottom_plane, -bottom_size],
+    #     [ bottom_size, bottom_plane,  bottom_size],
+    #     [-bottom_size, bottom_plane,  bottom_size],
+    # ], dtype=np.float64)
+    # faces_bottom = np.array([[0, 2, 1], [0, 3, 2]], dtype=np.int32)
+    # colors_bottom = np.array([[128, 128, 128], [128, 128, 128]], dtype=np.uint8)  # Gray
+    # objects.append((vertices_bottom, faces_bottom, colors_bottom))
 
     # Build BVH
     print("Building BVH...")

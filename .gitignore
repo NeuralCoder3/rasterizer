@@ -6,3 +6,12 @@ __pycache__/
 data/*.mtl
 output/*
 !output/.gitkeep
+render
+*.o
+*.out
+*.class
+*.hi
+*.hmi
+*.mi
+*.cmi
+*.cmx

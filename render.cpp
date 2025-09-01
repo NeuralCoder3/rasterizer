@@ -286,7 +286,7 @@ Object read_obj(const std::string& filename, const Color& color)
     return Object(vertices, faces, colors);
 }
 
-// g++ render.cpp -lm -O3 && ./a.out
+// g++ render.cpp -O3 && ./a.out
 int main()
 {
     int width = 100;

@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 from numpy.typing import NDArray
 
+# use_numba = True
 use_numba = False
 
 if use_numba:
@@ -11,6 +12,7 @@ if use_numba:
 else:
     from tqdm import tqdm
     type ProgressBar = tqdm
+    ProgressBar = tqdm
     njit = lambda nogil=True: lambda x: x
 
 @njit(nogil=True)
@@ -249,8 +251,8 @@ print(f"Camera destination: {destination}")
 objects = []
 
 # Create debug cube for testing
-vertices, faces, colors = create_debug_cube(size=8.0)
-objects.append((vertices, faces, colors))
+# vertices, faces, colors = create_debug_cube(size=8.0)
+# objects.append((vertices, faces, colors))
 
 # Add bunny
 bunny_vertices, bunny_faces = readObj("data/bunny.obj")
@@ -259,22 +261,22 @@ bunny_colors = np.zeros((bunny_faces.shape[0], 3), dtype=np.uint8)
 bunny_colors[:, 0] = 255  # Red
 bunny_colors[:, 1] = 0
 bunny_colors[:, 2] = 0
-# objects.append((bunny_vertices, bunny_faces, bunny_colors))
+objects.append((bunny_vertices, bunny_faces, bunny_colors))
 
 
 # For debugging, you can also add a colored bottom plane:
 # Add bottom plane
-bottom_size = 10.0
-bottom_plane = -5  # Position below the bunny
-vertices_bottom = np.array([
-    [-bottom_size, bottom_plane, -bottom_size],
-    [ bottom_size, bottom_plane, -bottom_size],
-    [ bottom_size, bottom_plane,  bottom_size],
-    [-bottom_size, bottom_plane,  bottom_size],
-], dtype=np.float64)
-faces_bottom = np.array([[0, 2, 1], [0, 3, 2]], dtype=np.int32)
-colors_bottom = np.array([[128, 128, 128], [128, 128, 128]], dtype=np.uint8)  # Gray
-objects.append((vertices_bottom, faces_bottom, colors_bottom))
+# bottom_size = 10.0
+# bottom_plane = -5  # Position below the bunny
+# vertices_bottom = np.array([
+#     [-bottom_size, bottom_plane, -bottom_size],
+#     [ bottom_size, bottom_plane, -bottom_size],
+#     [ bottom_size, bottom_plane,  bottom_size],
+#     [-bottom_size, bottom_plane,  bottom_size],
+# ], dtype=np.float64)
+# faces_bottom = np.array([[0, 2, 1], [0, 3, 2]], dtype=np.int32)
+# colors_bottom = np.array([[128, 128, 128], [128, 128, 128]], dtype=np.uint8)  # Gray
+# objects.append((vertices_bottom, faces_bottom, colors_bottom))
 
 
 origin = np.array(origin, dtype=np.float64)
@@ -290,8 +292,7 @@ print(f"Dot products - F·R: {np.dot(forward, right):.3f}, F·U: {np.dot(forward
 
 
 
-# with ProgressBar(total=width*height, desc="Rendering") as progress_bar:
-with tqdm(total=width*height, desc="Rendering") as progress_bar:
+with ProgressBar(total=width*height, desc="Rendering") as progress_bar:
     pixels, depth_map = render(width, height, objects, origin, direction, fov, progress_bar)
 
 # Save the colored rendered image
