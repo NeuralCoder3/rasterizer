@@ -21,7 +21,7 @@ Side Note: All code is written manually (expect python bvh renderer).
 
 ![Speedup Chart](chart.png)
 
-Speed up vs C:
+Runtime vs C:
 - Purple: Interpreted
 - Light blue: JIT
 - Blue: Compiled
