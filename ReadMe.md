@@ -18,10 +18,12 @@ Side Note: All code is written manually (expect python bvh renderer).
 | C                        |  0.27 |
 | C++                      |  0.27 |
 | Haskell                  |  1.66 |
+| Rust                     |  0.49 |
 
 ![Speedup Chart](chart.png)
 
 Runtime vs C:
+
 - Purple: Interpreted
 - Light blue: JIT
 - Blue: Compiled
